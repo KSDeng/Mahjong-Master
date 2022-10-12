@@ -1,10 +1,11 @@
 import zipfile
 import shutil
 import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader
+from torch.optim.lr_scheduler import ExponentialLR
 import torchvision
 import torchvision.transforms as transforms
-from torch.utils.data import DataLoader
-import torch.nn as nn
 from torchvision.models import resnet50
 import datetime
 
@@ -45,11 +46,12 @@ if __name__ == "__main__":
     test_data_loader = DataLoader(test_set, batch_size, shuffle=True, num_workers=0)
 
     # training model
-    num_epoch = 10
+    num_epoch = 20
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     model = resnet50()
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    scheduler = ExponentialLR(optimizer, gamma=0.8, verbose=True)
 
     for epoch in range(num_epoch):
         running_loss = 0.0
@@ -63,10 +65,12 @@ if __name__ == "__main__":
 
             running_loss += loss.item()
 
-            print('epoch {:3d} | {:5d} batches loss: {:.4f}'.format(epoch, i + 1, running_loss / 128))
+            print('epoch {:3d} | {:5d} batches loss: {:.7f}'.format(epoch, i + 1, running_loss / 128))
             running_loss = 0.0
             if (i + 1) % 128 == 0:
                 torch.save(model.state_dict(), weight_save_path)
+        scheduler.step()
+
 
     print('Finished Training')
 
