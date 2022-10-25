@@ -1,3 +1,4 @@
 .DS_Store
 weight-*
 .idea/*
+.ipynb_checkpoints/*
