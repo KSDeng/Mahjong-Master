@@ -16,8 +16,12 @@ def getTimeStamp():
 if __name__ == "__main__":
     image_size = (64, 64)
     weight_save_path = 'weight-resnet50-' + getTimeStamp()
-
     path = '/tmp/dataset_cs5242'
+    validation_set_ratio = 0.2
+    batch_size = 32
+    num_epoch = 20
+    lr = 0.001
+    lr_decay_gamma = 0.8
 
     shutil.rmtree(path, ignore_errors=True)
     with zipfile.ZipFile("./dataset_preprocessed.zip", 'r') as zip_ref:
@@ -27,12 +31,8 @@ if __name__ == "__main__":
         transforms.ToTensor()
     ])
     dataset = torchvision.datasets.ImageFolder(root = path + "/dataset_preprocessed", transform=transform)
-
     print(dataset.classes)  # classes names
     print(dataset.class_to_idx) # index of classes
-
-    validation_set_ratio = 0.2
-    batch_size = 32
 
     n = len(dataset)  # total number of examples
     n_test = int(validation_set_ratio * n)
@@ -46,12 +46,11 @@ if __name__ == "__main__":
     test_data_loader = DataLoader(test_set, batch_size, shuffle=True, num_workers=0)
 
     # training model
-    num_epoch = 20
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     model = resnet50()
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-    scheduler = ExponentialLR(optimizer, gamma=0.8, verbose=True)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    scheduler = ExponentialLR(optimizer, gamma=lr_decay_gamma, verbose=True)
 
     for epoch in range(num_epoch):
         running_loss = 0.0
@@ -64,13 +63,12 @@ if __name__ == "__main__":
             optimizer.step()
 
             running_loss += loss.item()
-
-            print('epoch {:3d} | {:5d} batches loss: {:.7f}'.format(epoch, i + 1, running_loss / 128))
-            running_loss = 0.0
-            if (i + 1) % 128 == 0:
+            if (i + 1) % 30 == 0:
+                print('epoch {:3d} | {:5d} batches loss: {:.7f}'.format(epoch, i + 1, running_loss / 30))
+                running_loss = 0.0
                 torch.save(model.state_dict(), weight_save_path)
         scheduler.step()
 
 
-    print('Finished Training')
+    print('Finished Training, the model weights are saved in {}'.format(weight_save_path))
 
