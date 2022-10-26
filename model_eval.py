@@ -7,7 +7,7 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
 # load model weights
-path = 'weight-20221012124841'
+path = 'weight-resnet50-20221012124841'
 model = resnet50()
 model.load_state_dict(torch.load(path))
 
@@ -40,8 +40,6 @@ train_data_loader = DataLoader(train_set, batch_size, shuffle=True, num_workers=
 test_data_loader = DataLoader(test_set, batch_size, shuffle=True, num_workers=0)
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-dataiter = iter(test_data_loader)
-images, labels = dataiter.next()
 correct = 0
 total = 0
 with torch.no_grad():
