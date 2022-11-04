@@ -84,6 +84,27 @@ class ResNet(nn.Module):
         x = x.view(x.size(0), -1)
         x = self.fc(x)
         return x
+import torch.nn.functional as F
+
+class MLP(nn.Module):
+    # Define Multilayer Perceptron
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(3, 6, 5)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.conv2 = nn.Conv2d(6, 16, 5)
+        self.fc1 = nn.Linear(2704, 768)
+        self.fc2 = nn.Linear(768, 84)
+        self.fc3 = nn.Linear(84, 34)
+
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = torch.flatten(x, 1)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
 
 if __name__ == "__main__":
     image_size = (64, 64)
@@ -127,8 +148,8 @@ if __name__ == "__main__":
     log = Report(num_epoch)
 
     cross_entropy = nn.CrossEntropyLoss()
-    def resnet_criterion(predictions, targets):
-        loss = cross_entropy(predictions, targets)
+    def criterion(predictions, targets):
+        loss = loss_function(predictions, targets)
         acc = (torch.max(predictions, dim=1)[1] == targets).float().mean()
         return loss, acc
 
@@ -143,29 +164,56 @@ if __name__ == "__main__":
         return loss, acc
 
     @torch.no_grad()
-    def validate_batch(model, data, criterion):
+    def test_batch(model, data, criterion):
         model.eval()
         inputs, labels = data[0].to(device), data[1].to(device)
-        outputs = model(data)
+        outputs = model(inputs)
         loss, acc = criterion(outputs, labels)
         return loss, acc
 
     for epoch in range(num_epoch):
         N = len(train_data_loader)
         for i, data in enumerate(train_data_loader, 0):
-            loss, acc = train_batch(model, data, optimizer, resnet_criterion)
+            loss, acc = train_batch(model, data, optimizer, criterion)
             log.record(pos=epoch+(i+1)/N, train_loss = loss, train_acc = acc, end = '\r')
         print()
 
         N = len(test_data_loader)
         for i, data in enumerate(test_data_loader, 0):
-            loss, acc = validate_batch(model, data, resnet_criterion)
+            loss, acc = test_batch(model, data, criterion)
             log.record(pos=epoch+(i+1)/N, test_loss = loss, test_acc = acc, end = '\r')
         print()
         scheduler.step()
+    #
+    # log.plot(['train_acc', 'test_acc'])
+    # plt.show()
+    # log.plot(['train_loss', 'test_loss'])
+    # plt.show()
 
-    log.plot(['train_acc', 'test_acc'])
-    plt.show()
-    log.plot(['train_loss', 'test_loss'])
-    plt.show()
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    loss_function = nn.CrossEntropyLoss()
+    num_epoch = 2
+    lr_decay_gamma = 0.9
+    log_mlp = Report(num_epoch)
+    log_resnet = Report(num_epoch)
+
+    model = MLP()
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    scheduler = ExponentialLR(optimizer, gamma=lr_decay_gamma, verbose=True)
+
+    for epoch in range(num_epoch):
+        N = len(train_data_loader)
+        for i, data in enumerate(train_data_loader, 0):
+            loss, acc = train_batch(model, data, optimizer, criterion)
+            log_mlp.record(pos=epoch + (i + 1) / N, train_loss=loss, train_acc=acc, end='\r')
+        print()
+
+        N = len(test_data_loader)
+        for i, data in enumerate(test_data_loader, 0):
+            loss, acc = test_batch(model, data, criterion)
+            log_mlp.record(pos=epoch + (i + 1) / N, test_loss=loss, test_acc=acc, end='\r')
+        print()
+        scheduler.step()
+
+    print("train_acc:", [v for pos, v in log_mlp.train_acc][-1], "|test_acc:", [v for pos, v in log_mlp.test_acc][-1])
 
