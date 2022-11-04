@@ -2,4 +2,6 @@
 weight-*
 .idea/*
 .ipynb_checkpoints/*
+dataset
 dataset_preprocessed
+__MACOSX
