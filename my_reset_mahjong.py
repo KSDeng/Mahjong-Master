@@ -1,5 +1,7 @@
 import zipfile
 import shutil
+
+import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -118,27 +120,52 @@ if __name__ == "__main__":
     # training model
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     model = ResNet(ResidualBlock, [3,4,6,3], num_classes=34).to(device)
-    criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = ExponentialLR(optimizer, gamma=lr_decay_gamma, verbose=True)
 
-    for epoch in range(num_epoch):
-        running_loss = 0.0
-        for i, data in enumerate(train_data_loader, 0):
-            inputs, labels = data[0].to(device), data[1].to(device)
-            optimizer.zero_grad()
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
+    from torch_snippets.torch_loader import Report
+    log = Report(num_epoch)
 
-            running_loss += loss.item()
-            if (i + 1) % 30 == 0:
-                print('epoch {}|{}  {:5d} batches loss: {:.7f}'.format(epoch, num_epoch, i + 1, running_loss / 30))
-                running_loss = 0.0
-                torch.save(model.state_dict(), weight_save_path)
+    cross_entropy = nn.CrossEntropyLoss()
+    def resnet_criterion(predictions, targets):
+        loss = cross_entropy(predictions, targets)
+        acc = (torch.max(predictions, dim=1)[1] == targets).float().mean()
+        return loss, acc
+
+    def train_batch(model, data, optimizer, criterion):
+        model.train()
+        inputs, labels = data[0].to(device), data[1].to(device)
+        optimizer.zero_grad()
+        outputs = model(inputs)
+        loss, acc = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+        return loss, acc
+
+    @torch.no_grad()
+    def validate_batch(model, data, criterion):
+        model.eval()
+        inputs, labels = data[0].to(device), data[1].to(device)
+        outputs = model(data)
+        loss, acc = criterion(outputs, labels)
+        return loss, acc
+
+    for epoch in range(num_epoch):
+        N = len(train_data_loader)
+        for i, data in enumerate(train_data_loader, 0):
+            loss, acc = train_batch(model, data, optimizer, resnet_criterion)
+            log.record(pos=epoch+(i+1)/N, train_loss = loss, train_acc = acc, end = '\r')
+        print()
+
+        N = len(test_data_loader)
+        for i, data in enumerate(test_data_loader, 0):
+            loss, acc = validate_batch(model, data, resnet_criterion)
+            log.record(pos=epoch+(i+1)/N, test_loss = loss, test_acc = acc, end = '\r')
+        print()
         scheduler.step()
 
-
-    print('Finished Training, the model weights are saved in {}'.format(weight_save_path))
+    log.plot(['train_acc', 'test_acc'])
+    plt.show()
+    log.plot(['train_loss', 'test_loss'])
+    plt.show()
 
