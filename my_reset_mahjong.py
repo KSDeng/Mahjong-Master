@@ -146,7 +146,7 @@ if __name__ == "__main__":
     def validate_batch(model, data, criterion):
         model.eval()
         inputs, labels = data[0].to(device), data[1].to(device)
-        outputs = model(data)
+        outputs = model(inputs)
         loss, acc = criterion(outputs, labels)
         return loss, acc
 
