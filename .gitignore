@@ -5,3 +5,5 @@ weight-*
 dataset
 dataset_preprocessed
 __MACOSX
+dataset_preprocessed.zip
+dataset_raw.zip
