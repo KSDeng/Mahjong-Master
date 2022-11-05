@@ -12,6 +12,13 @@ import torchvision.transforms as transforms
 import torch
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
+import torch.nn as nn
+from torch.optim.lr_scheduler import ExponentialLR
+from torch_snippets.torch_loader import Report
+from torch.optim.lr_scheduler import ExponentialLR
+import datetime
+import gc
+import torch.nn.functional as F
 
 # assign directory
 directory_dataset = './dataset/'
@@ -172,12 +179,10 @@ if __name__ == "__main__":
         print(i, data[0].permute(0, 2, 3, 1).shape, data[1].shape)
         break
 
-    import torch.nn as nn
-    from torch.optim.lr_scheduler import ExponentialLR
-    from torch_snippets.torch_loader import Report
-    from torch.optim.lr_scheduler import ExponentialLR
+
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    print(device)
 
     loss_function = nn.CrossEntropyLoss()
     def criterion(predictions, targets):
@@ -207,9 +212,6 @@ if __name__ == "__main__":
         outputs = model(inputs)
         loss, acc = criterion(outputs, labels)
         return loss, acc
-
-
-    import torch.nn.functional as F
 
 
     class MLP(nn.Module):
@@ -283,7 +285,6 @@ if __name__ == "__main__":
             out = self.relu(out)
             return out
 
-    import datetime
     def getTimeStamp():
         now = datetime.datetime.now()
         return now.strftime("%Y%m%d%H%M%S")
@@ -337,7 +338,6 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     scheduler = ExponentialLR(optimizer, gamma=lr_decay_gamma, verbose=True)
 
-    import gc
 
     log_resnet = Report(num_epoch)
     for epoch in range(num_epoch):
