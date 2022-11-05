@@ -257,6 +257,13 @@ if __name__ == "__main__":
         scheduler.step()
 
     print("train_acc:", [v for pos, v in log_mlp.train_acc][-1], "|test_acc:", [v for pos, v in log_mlp.test_acc][-1])
+    fig, ax = plt.subplots()
+    log_mlp.plot(['train_acc', 'test_acc'], ax=ax)
+    plt.savefig('mlp_acc.png')
+
+    fig, ax = plt.subplots()
+    log_mlp.plot(['train_loss', 'test_loss'], ax=ax)
+    plt.savefig('mlp_loss.png')
 
 
     class ResidualBlock(nn.Module):
@@ -338,7 +345,6 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     scheduler = ExponentialLR(optimizer, gamma=lr_decay_gamma, verbose=True)
 
-
     log_resnet = Report(num_epoch)
     for epoch in range(num_epoch):
         N = len(train_data_loader)
@@ -358,6 +364,14 @@ if __name__ == "__main__":
 
     print("train_acc:", [v for pos, v in log_resnet.train_acc][-1], "|test_acc:",
           [v for pos, v in log_resnet.test_acc][-1])
+
+    fig, ax = plt.subplots()
+    log_resnet.plot(['train_acc', 'test_acc'], ax=ax)
+    plt.savefig('resnet_acc.png')
+
+    fig, ax = plt.subplots()
+    log_resnet.plot(['train_loss', 'test_loss'], ax=ax)
+    plt.savefig('resnet_loss.png')
 
 
 
